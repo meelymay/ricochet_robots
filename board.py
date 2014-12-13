@@ -3,7 +3,7 @@ import random
 import sys
 
 ROBOTS = ['A', 'B', 'C', 'D', 'E', 'F']
-WALL_DENSITY = 2/25.
+WALL_DENSITY = 3/25.
 
 class Square:
     def __init__(self, hor_wall=0, vert_wall=0):
@@ -11,15 +11,34 @@ class Square:
         self.hor_wall = hor_wall
         self.vert_wall = vert_wall
         self.robot = None
+        self.target = None
 
     def set_robot(self, robot):
         self.robot = robot
 
+    def set_target(self, target):
+        self.target = target
+
     def empty(self):
         self.robot = None
 
+    def copy(self, board):
+        # print "square copy"
+        square = Square(self.hor_wall, self.vert_wall)
+        if self.robot:
+            # print "set robot"
+            square.set_robot(self.robot.copy(board))
+        # print "set target",self.target
+        square.set_target(self.target)
+        return square
+
+
     def __str__(self):
-        return '*' if self.robot is None else self.robot.__str__()
+        if self.robot is not None:
+            return self.robot.__str__()
+        if self.target:
+            return self.target.__str__().lower()
+        return '*'
 
 class Robot:
     def __init__(self, color, x, y, board):
@@ -28,21 +47,29 @@ class Robot:
         self.y = y
         self.board = board
 
+    def copy(self, board):
+        # print "robot copy",self.color, self.x, self.y, board.board[self.x][self.y]
+        return Robot(self.color, self.x, self.y, board)
+
     def move(self, hor, vert):
         if abs(hor+vert) != 1 or abs(hor) not in [0,1] or abs(vert) not in [0,1]:
             raise Exception("can only move one direction at a time")
         while self.can_move(hor, vert):
             self.x += hor
             self.y += vert
+        return self.square()
+
+    def square(self):
+        return self.board.board[self.x][self.y]
 
     def can_move(self, hor, vert):
         # border
         if self.x+hor < 0 or self.x+hor >= self.board.size or self.y+vert < 0 or self.y+vert >= self.board.size:
             return False
         # walled in current square
-        if abs(hor) == 1 and hor == self.board.board[self.x][self.y].hor_wall:
+        if abs(hor) == 1 and hor == self.square().hor_wall:
             return False
-        if abs(vert) == 1 and vert == self.board.board[self.x][self.y].vert_wall:
+        if abs(vert) == 1 and vert == self.square().vert_wall:
             return False
         # walled in next square
         if abs(hor) == 1 and hor == -self.board.board[self.x+hor][self.y].hor_wall:
@@ -57,12 +84,70 @@ class Robot:
     def __str__(self):
         return self.color
 
+class AI:
+    def __init__(self, game):
+        self.game = game
+        self.moves = self.get_moves()
+
+    def get_moves(self):
+        moves = []
+        for robot in ROBOTS:
+            for hor in (-1, 0, 1):
+                for vert in (-1, 0, 1):
+                    if abs(hor+vert) == 1:
+                        moves.append((robot, hor, vert))
+        return moves
+
+    def find_path(self):
+        paths = [[(self.game.copy(), None)]]
+
+        count = 1
+        while True:
+            # count += 1
+            # take a path off the queue
+            first_path = paths[0]
+            paths.remove(first_path)
+            # get the current game state in that path
+            game = first_path[-1][0]
+            if count % 100 == 0:
+                print "Searching...",count
+                game.show_board()
+            # try all moves from that state
+            for move in self.moves:
+                new_game = game.copy()
+                new_path = first_path+[(new_game, move)]
+                (color, hor, vert) = move
+                square = new_game.move_robot(color, hor, vert)
+                if square is not None:
+                    return new_path
+                paths.append(new_path)
+
 class Board:
-    def __init__(self, size):
+    def __init__(self, size, blank=False):
         self.size = size
         self.board = self.init_squares()
         self.robots = {}
-        self.place_robots()
+        if not blank:
+            self.place_robots()
+            self.place_target()
+        self.moves = 0
+
+    def copy(self):
+        board = Board(self.size, blank=True)
+        board.board = [[sq.copy(board) for sq in row] for row in self.board]
+        board.robots = dict(reduce(lambda x, y: x+y, [[(col.robot.color, col.robot) for col in row if col.robot is not None] for row in board.board]))
+        board.moves = self.moves
+        return board
+
+    def empty_square(self):
+        (x,y) = (random.randint(0,self.size-1),random.randint(0,self.size-1))
+        while self.board[x][y].robot is not None:
+            (x,y) = (random.randint(0,self.size-1),random.randint(0,self.size-1))
+        return (x,y)
+
+    def place_target(self):
+        (x,y) = self.empty_square()
+        self.board[x][y].set_target(random.choice(ROBOTS))
 
     def init_squares(self):
         board = [[Square() for s in range(self.size)] for s in range(self.size)]
@@ -82,18 +167,29 @@ class Board:
 
     def place_robots(self):
         for robot in ROBOTS:
-            (x,y) = (random.randint(0,self.size-1),random.randint(0,self.size-1))
-            while self.board[x][y].robot is not None:
-                (x,y) = (random.randint(0,self.size-1),random.randint(0,self.size-1))
+            (x,y) = self.empty_square()
             robot_obj = Robot(robot, x, y, self)
             self.board[x][y].set_robot(robot_obj)
             self.robots[robot] = robot_obj
 
+    def target_hit(self, square=None):
+        if not square:
+            square = filter(lambda x: x.target is not None, reduce(lambda x, y: x + y, self.board))
+        return square.target == square.robot.color
+
     def move_robot(self, robot_color, hor, vert):
+        self.moves += 1
         robot = self.robots[robot_color]
         self.board[robot.x][robot.y].empty()
-        robot.move(hor, vert)
+        square = robot.move(hor, vert)
         self.board[robot.x][robot.y].set_robot(robot)
+        if self.target_hit(square):
+            square.set_target(None)
+            self.place_target()
+            print '\n\n-----------------\nCongrats! You hit the target in %s moves!\n-----------------' % self.moves
+            self.moves = 0
+            return square
+        return None
 
     def show_board(self):
         s = [[' ' for i in range(self.size*2+1)] for j in range(self.size*2+1)]
@@ -128,17 +224,46 @@ class Board:
                 print s[i][j],
             print
 
+def parse_input(raw_text):
+    usage = "Requires three inputs: [ROBOT] [VERTICAL: {1, 0, 1}] [HORIZONTAL: {-1, 0, 1}]"
+    if raw_text == "AI":
+        return ("AI", None, None)
+    text = raw_text.split()
+    if len(text) != 3:
+        print usage
+        return None
+    try:
+        vert = int(text[1])
+        hor = int(text[2])
+        if hor not in [-1, 0, 1] or vert not in [-1, 0, 1] or abs(hor + vert) != 1:
+            print usage
+            return None
+    except:
+        print usage
+        return None
+    return (text[0], int(text[1]), int(text[2]))
+
+def get_input():
+    triplet = None
+    while triplet == None:
+        triplet = parse_input(raw_input('Which robot should move? Which way? '))
+    return triplet
+
 if __name__ == "__main__":
     size = int(sys.argv[1])
     game = Board(size)
     game.show_board()
 
+    # ai_moves = AI(game).find_path()
+
     input = None
     while input != "EXIT":
-        input = raw_input('Which robot should move? Which way? ')
-        robot, hor, vert = input.split()
-        hor = int(hor)
-        vert = int(vert)
+        robot, hor, vert = get_input()
+        if robot == "AI":
+            for move in ai_moves:
+                print move[1]
+                move[0].show_board()
+                print len(ai_moves),"moves"
         game.move_robot(robot, hor, vert)
         game.show_board()
 
