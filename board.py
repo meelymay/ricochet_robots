@@ -228,6 +228,8 @@ def parse_input(raw_text):
     usage = "Requires three inputs: [ROBOT] [VERTICAL: {1, 0, 1}] [HORIZONTAL: {-1, 0, 1}]"
     if raw_text == "AI":
         return ("AI", None, None)
+    if raw_text == "EXIT":
+        return ("EXIT", None, None)
     text = raw_text.split()
     if len(text) != 3:
         print usage
@@ -259,6 +261,8 @@ if __name__ == "__main__":
     input = None
     while input != "EXIT":
         robot, hor, vert = get_input()
+        if robot == "EXIT":
+            break
         if robot == "AI":
             for move in ai_moves:
                 print move[1]
