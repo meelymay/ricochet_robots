@@ -191,6 +191,19 @@ class Board:
             return square
         return None
 
+    def board_view(self):
+        view = []
+        for x, row in enumerate(self.board):
+            for y, square in enumerate(row):
+                obj = {}
+                obj['x'] = x
+                obj['y'] = y
+                obj['hor'] = square.hor_wall
+                obj['vert'] = square.vert_wall
+                obj['robot'] = square.robot.color if square.robot else None
+                view.append(obj)
+        return view
+
     def show_board(self):
         s = [[' ' for i in range(self.size*2+1)] for j in range(self.size*2+1)]
 

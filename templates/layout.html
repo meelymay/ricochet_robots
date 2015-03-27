@@ -1,0 +1,12 @@
+<!doctype html>
+<title>Tic Tac Toe</title>
+<!-- <script type="text/javascript"
+  src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script> -->
+<script type=text/javascript src="{{
+  url_for('static', filename='jquery-2.1.1.min.js') }}"></script>
+<script type=text/javascript src="{{
+  url_for('static', filename='main.js') }}"></script>
+<script type="text/javascript">
+  var $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+{% block body %}{% endblock %}
