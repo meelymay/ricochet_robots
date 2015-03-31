@@ -14,14 +14,22 @@ function selectRobot() {
 	.style('stroke', 'white');
 }
 
-function updateRobotPosition(data) {
-    console.log('update robot position');
-    console.log(data);
-    console.log(currentrobot);
-    var newPosition = data.data;
-    currentRobot
-	.attr("cx", (newPosition.x+.5)*sqrSize)
-	.attr("cy", (newPosition.y+.5)*sqrSize);
+function moveRobot() {
+    console.log('current robot: ' + currentRobot);
+    var params = {
+	robot: currentRobot,
+	x: d3.select(this).data().x,
+	y: d3.select(this).data().y
+    };
+    $.get('/move', params, function(data) {
+	    console.log('update robot position');
+	    console.log(data);
+	    console.log(currentrobot);
+	    var newPosition = data.data;
+	    currentRobot
+		.attr("cx", (newPosition.x+.5)*sqrSize)
+		.attr("cy", (newPosition.y+.5)*sqrSize);
+	});
 }
 
 function paintRobots(robots) {
@@ -85,15 +93,7 @@ function main() {
 	      d3.select(this)
 	      .style('fill', backgroundColor);
 	  })
-      .on('click', function() {
-	      console.log('current robot: ' + currentRobot);
-	      var params = {
-		  robot: currentRobot,
-		  x: d3.select(this).data().x,
-		  y: d3.select(this).data().y
-	      };
-	      $.get('/move', params, updateRobotPosition);
-	  })
+      .on('click', moveRobot)
       .style("stroke", '#555');
 
   var horWalls = grid.selectAll(".horwall")
