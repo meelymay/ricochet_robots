@@ -16,16 +16,23 @@ function selectRobot() {
 
 function moveRobot() {
     console.log('current robot: ' + currentRobot);
+    var square = d3.select(this).data()[0];
+    console.log('data: ');
+    console.log(square);
     var params = {
-	robot: currentRobot,
-	x: d3.select(this).data().x,
-	y: d3.select(this).data().y
+	robot: currentRobot.color,
+	x: square.x,
+	y: square.y
     };
+    console.log('params');
+    console.log(params);
     $.get('/move', params, function(data) {
 	    console.log('update robot position');
 	    console.log(data);
-	    console.log(currentrobot);
+	    console.log(currentRobot);
 	    var newPosition = data.data;
+	    console.log('x ' + newPosition.x);
+	    console.log('y ' + newPosition.y);
 	    currentRobot
 		.attr("cx", (newPosition.x+.5)*sqrSize)
 		.attr("cy", (newPosition.y+.5)*sqrSize);

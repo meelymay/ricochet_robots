@@ -11,7 +11,10 @@ def draw():
 
 @app.route('/move')
 def move():
-    return jsonify(data={'x':10, 'y':10})
+    x = request.args.get('x')
+    y = request.args.get('y')
+    print 'moving to', x,y
+    return jsonify(data={'x': int(x), 'y': int(y)})
 
 
 @app.route('/')
