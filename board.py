@@ -3,7 +3,15 @@ import random
 import sys
 
 ROBOTS = ['A', 'B', 'C', 'D', 'E', 'F']
-WALL_DENSITY = 3/25.
+COLORS = {
+    'a': 'red',
+    'b': 'blue',
+    'c': 'cyan',
+    'd': 'yellow',
+    'e': 'green',
+    'f': 'purple'
+}
+WALL_DENSITY = 1/10.
 
 class Square:
     def __init__(self, hor_wall=0, vert_wall=0):
@@ -200,7 +208,7 @@ class Board:
                 obj['y'] = y
                 obj['hor'] = square.hor_wall
                 obj['vert'] = square.vert_wall
-                obj['robot'] = square.robot.color if square.robot else None
+                obj['robot'] = COLORS[square.robot.color.lower()] if square.robot else None
                 view.append(obj)
         return view
 
