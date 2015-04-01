@@ -3,6 +3,14 @@ import random
 import sys
 
 ROBOTS = ['A', 'B', 'C', 'D', 'E', 'F']
+LETTERS = {
+    'red': 'a',
+    'blue': 'b',
+    'cyan': 'c',
+    'yellow': 'd',
+    'green': 'e',
+    'purple': 'f'
+}
 COLORS = {
     'a': 'red',
     'b': 'blue',
@@ -11,11 +19,13 @@ COLORS = {
     'e': 'green',
     'f': 'purple'
 }
-WALL_DENSITY = 1/10.
+WALL_DENSITY = 0/10.
 
 class Square:
-    def __init__(self, hor_wall=0, vert_wall=0):
+    def __init__(self, x, y, hor_wall=0, vert_wall=0):
         # booleans to indicate if there is a wall in that direction
+        self.x = x
+        self.y = y
         self.hor_wall = hor_wall
         self.vert_wall = vert_wall
         self.robot = None
@@ -32,7 +42,7 @@ class Square:
 
     def copy(self, board):
         # print "square copy"
-        square = Square(self.hor_wall, self.vert_wall)
+        square = Square(self.x, self.y, self.hor_wall, self.vert_wall)
         if self.robot:
             # print "set robot"
             square.set_robot(self.robot.copy(board))
@@ -49,7 +59,8 @@ class Square:
         return '*'
 
 class Robot:
-    def __init__(self, color, x, y, board):
+    def __init__(self, name, x, y, color, board):
+        self.name = name
         self.color = color
         self.x = x
         self.y = y
@@ -57,7 +68,7 @@ class Robot:
 
     def copy(self, board):
         # print "robot copy",self.color, self.x, self.y, board.board[self.x][self.y]
-        return Robot(self.color, self.x, self.y, board)
+        return Robot(self.name, self.x, self.y, self.color, board)
 
     def move(self, hor, vert):
         if abs(hor+vert) != 1 or abs(hor) not in [0,1] or abs(vert) not in [0,1]:
@@ -90,7 +101,7 @@ class Robot:
         return True
 
     def __str__(self):
-        return self.color
+        return self.name
 
 class AI:
     def __init__(self, game):
@@ -124,9 +135,9 @@ class AI:
             for move in self.moves:
                 new_game = game.copy()
                 new_path = first_path+[(new_game, move)]
-                (color, hor, vert) = move
-                square = new_game.move_robot(color, hor, vert)
-                if square is not None:
+                (robot, hor, vert) = move
+                square = new_game.move_robot(robot, hor, vert)
+                if new_game.moves == 0:
                     return new_path
                 paths.append(new_path)
 
@@ -143,7 +154,7 @@ class Board:
     def copy(self):
         board = Board(self.size, blank=True)
         board.board = [[sq.copy(board) for sq in row] for row in self.board]
-        board.robots = dict(reduce(lambda x, y: x+y, [[(col.robot.color, col.robot) for col in row if col.robot is not None] for row in board.board]))
+        board.robots = dict(reduce(lambda x, y: x+y, [[(col.robot.name, col.robot) for col in row if col.robot is not None] for row in board.board]))
         board.moves = self.moves
         return board
 
@@ -158,25 +169,25 @@ class Board:
         self.board[x][y].set_target(random.choice(ROBOTS))
 
     def init_squares(self):
-        board = [[Square() for s in range(self.size)] for s in range(self.size)]
-        for row in board:
+        board = [[Square(x, y) for x in range(self.size)] for y in range(self.size)]
+        for k, row in enumerate(board):
             for i in range(len(row)):
                 if random.random() < WALL_DENSITY:
                     angle = random.randint(0,3)
                     if angle == 0:
-                        row[i] = Square(hor_wall=-1, vert_wall=-1)
+                        row[i] = Square(i, k, hor_wall=-1, vert_wall=-1)
                     elif angle == 1:
-                        row[i] = Square(hor_wall=1, vert_wall=-1)
+                        row[i] = Square(i, k, hor_wall=1, vert_wall=-1)
                     elif angle == 2:
-                        row[i] = Square(hor_wall=1, vert_wall=1)
+                        row[i] = Square(i, k, hor_wall=1, vert_wall=1)
                     elif angle == 3:
-                        row[i] = Square(hor_wall=-1, vert_wall=1)
+                        row[i] = Square(i, k, hor_wall=-1, vert_wall=1)
         return board
 
     def place_robots(self):
         for robot in ROBOTS:
             (x,y) = self.empty_square()
-            robot_obj = Robot(robot, x, y, self)
+            robot_obj = Robot(robot, x, y, COLORS[robot.lower()], self)
             self.board[x][y].set_robot(robot_obj)
             self.robots[robot] = robot_obj
 
@@ -185,30 +196,31 @@ class Board:
             square = filter(lambda x: x.target is not None, reduce(lambda x, y: x + y, self.board))
         return square.target == square.robot.color
 
-    def move_robot(self, robot_color, hor, vert):
-        self.moves += 1
-        robot = self.robots[robot_color]
+    def move_robot(self, robot_name, hor, vert):
+        robot = self.robots[robot_name]
+        if hor not in [-1, 0, 1] or vert not in [-1, 0, 1] or abs(hor + vert) != 1:
+            return None
         self.board[robot.x][robot.y].empty()
         square = robot.move(hor, vert)
         self.board[robot.x][robot.y].set_robot(robot)
+        self.moves += 1
         if self.target_hit(square):
             square.set_target(None)
             self.place_target()
             print '\n\n-----------------\nCongrats! You hit the target in %s moves!\n-----------------' % self.moves
             self.moves = 0
-            return square
-        return None
+        return square
 
     def board_view(self):
         view = []
-        for x, row in enumerate(self.board):
-            for y, square in enumerate(row):
+        for y, row in enumerate(self.board):
+            for x, square in enumerate(row):
                 obj = {}
                 obj['x'] = x
                 obj['y'] = y
                 obj['hor'] = square.hor_wall
                 obj['vert'] = square.vert_wall
-                obj['robot'] = COLORS[square.robot.color.lower()] if square.robot else None
+                obj['robot'] = square.robot.color if square.robot else None
                 view.append(obj)
         return view
 

@@ -1,43 +1,169 @@
-function createPlayFunc(cellTag, i, j) {
-    return function(e) {
-	$.get('/play', {'i': i, 'j': j}, function(data) {
-		// do nothing if game over or space occupied
-		if ($('#winner').html() !== "" ||
-		    cellTag.html() === 'O' || cellTag.html() === 'X') {
-		    return;
-		}
+var sqrSize = 30;
+var backgroundColor = '#DDD';
+var currentRobot;
 
-		// play X
-		cellTag.html('X');
-		// play O
-		if ('x' in data) {
-		    var aiPlayTag = $('#cell' + data['x'] + data['y']);
-		    aiPlayTag.html('O');
-		}
-
-		// update game status
-		var status = data['status'];
-		if (status !== null) {
-		    var message = "Well, the game is over..." + status;
-		    if (status !== 'tie') {
-			message = message + " wins!";
-		    }
-		    $('#winner').html(message);
-		}
-	    });
-    };
+function selectRobot() {
+    console.log('old robot: ' + currentRobot);
+    if (currentRobot) {
+	currentRobot
+	    .style('stroke-width', '1')
+	    .style('stroke', 'black');
+    }
+    currentRobot = d3.select(this)
+	.style('stroke-width', '3')
+	.style('stroke', 'white');
 }
 
-$(function() {
-	for (var i in [0,1,2]) {
-	    for (var j in [0,1,2]) {
-		var cellName = '#cell' + i + j;
-		var cellTag = $(cellName);
-		var x = i;
-		var y = j;
-
-		// attach the play function to each cell
-		$(document).on('click', cellName, createPlayFunc(cellTag, i, j));
+function moveRobot() {
+    console.log('Current robot: ' + currentRobot);
+    console.log(currentRobot.data()[0]);
+    var square = d3.select(this).data()[0];
+    console.log('Clicked square: ');
+    console.log(square);
+    var params = {
+	robot: currentRobot.data()[0].robot,
+	x: square.x,
+	y: square.y,
+	oldX: currentRobot.data()[0].x,
+	oldY: currentRobot.data()[0].y
+    };
+    console.log('Params');
+    console.log(params);
+    $.get('/move', params, function(data) {
+	    console.log('Update robot position');
+	    var newPosition = data.data;
+	    console.log(newPosition);
+	    if (newPosition.length == 0) {
+		console.log('no good positions...');
+		return;
 	    }
-	}
-    });
+	    currentRobot.data()[0].x = newPosition.x;
+	    currentRobot.data()[0].y = newPosition.y;
+
+	    currentRobot
+		.attr("cx", (newPosition.x+.5)*sqrSize)
+		.attr("cy", (newPosition.y+.5)*sqrSize);
+	});
+}
+
+function paintRobots(robots) {
+    var svg = d3.select('svg');
+    
+    var robots = svg.selectAll(".robot")
+      .data(robots)
+      .enter().append("svg:circle")
+      .attr("class", "robot")
+      .attr("cx", function(d) {
+	      return (d.x+.5)*sqrSize;
+	  })
+      .attr("cy", function(d) {
+	      return (d.y+.5)*sqrSize;
+	  })
+      .attr("r", function(d) {
+	      if (d.robot) {
+		  return sqrSize/2-5;
+	      } else {
+		  return 0;
+	      }
+	  })
+      .style('fill', function(d) {
+	      return d.robot;
+	  })
+      .style("stroke", 'black')
+      .on('click', selectRobot);
+}
+
+function main() {
+    $.get('/board', {}, function(data) {
+  var board = data.data;
+  var h = board.length*50 + 25;
+  var w = h;
+
+  var grid = d3.select("body")
+      .append("svg")
+      .attr("width", w)
+      .attr("height", h);
+
+  var squares = grid.selectAll(".cell")
+      .data(board)
+      .enter().append("svg:rect")
+      .attr("class", "cell")
+      .attr("x", function(d) {
+	      return sqrSize*d.x;
+	  })
+      .attr("y", function(d) {
+	      return sqrSize*d.y;
+	  })
+      .attr("width", sqrSize)
+      .attr("height", sqrSize)
+      .style('fill', backgroundColor);
+
+  squares
+      .on('mouseover', function() {
+	      d3.select(this)
+	      .style('fill', '#0F0');
+	  })
+      .on('mouseout', function() {
+	      d3.select(this)
+	      .style('fill', backgroundColor);
+	  })
+      .on('click', moveRobot)
+      .style("stroke", '#555');
+
+  var horWalls = grid.selectAll(".horwall")
+      .data(board)
+      .enter().append("svg:rect")
+      .attr("class", "horwall")
+      .attr("y", function(d) {
+	      if (d.hor > 0) {
+		  return d.y*sqrSize;
+	      } else if (d.hor < 0) {
+		  return (d.y-1)*sqrSize;
+	      } else {
+		  return 0;
+	      }
+	  })
+      .attr("x", function(d) {
+	      return sqrSize*d.x;
+	  })
+      .attr("width", 2)
+      .attr("height", function(d) {
+	      if (d.hor != 0) {
+		  return sqrSize;
+	      } else {
+		  return 0;
+	      }
+	  })
+      .style('fill', '#555')
+      .style("stroke", '#555');
+
+  var verWalls = grid.selectAll(".verwall")
+      .data(board)
+      .enter().append("svg:rect")
+      .attr("class", "verwall")
+      .attr("x", function(d) {
+	      if (d.vert > 0) {
+		  return d.x*sqrSize;
+	      } else if (d.vert < 0) {
+		  return (d.x-1)*sqrSize;
+	      } else {
+		  return 0;
+	      }
+	  })
+      .attr("y", function(d) {
+	      return sqrSize*d.y;
+	  })
+      .attr("width", function(d) {
+	      if (d.vert != 0) {
+		  return sqrSize;
+	      } else {
+		  return 0;
+	      }
+	  })
+      .attr("height", 2)
+      .style('fill', '#555')
+      .style("stroke", '#555');
+
+  paintRobots(board);
+	});
+}
