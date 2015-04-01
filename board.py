@@ -19,7 +19,7 @@ COLORS = {
     'e': 'green',
     'f': 'purple'
 }
-WALL_DENSITY = 0/10.
+WALL_DENSITY = 1/15.
 
 class Square:
     def __init__(self, x, y, hor_wall=0, vert_wall=0):

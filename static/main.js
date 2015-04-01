@@ -3,7 +3,6 @@ var backgroundColor = '#DDD';
 var currentRobot;
 
 function selectRobot() {
-    console.log('old robot: ' + currentRobot);
     if (currentRobot) {
 	currentRobot
 	    .style('stroke-width', '1')
@@ -15,11 +14,7 @@ function selectRobot() {
 }
 
 function moveRobot() {
-    console.log('Current robot: ' + currentRobot);
-    console.log(currentRobot.data()[0]);
     var square = d3.select(this).data()[0];
-    console.log('Clicked square: ');
-    console.log(square);
     var params = {
 	robot: currentRobot.data()[0].robot,
 	x: square.x,
@@ -27,14 +22,9 @@ function moveRobot() {
 	oldX: currentRobot.data()[0].x,
 	oldY: currentRobot.data()[0].y
     };
-    console.log('Params');
-    console.log(params);
     $.get('/move', params, function(data) {
-	    console.log('Update robot position');
 	    var newPosition = data.data;
-	    console.log(newPosition);
 	    if (newPosition.length == 0) {
-		console.log('no good positions...');
 		return;
 	    }
 	    currentRobot.data()[0].x = newPosition.x;
@@ -116,18 +106,18 @@ function main() {
       .attr("class", "horwall")
       .attr("y", function(d) {
 	      if (d.hor > 0) {
-		  return d.y*sqrSize;
+		  return (d.y + 1)*sqrSize;
 	      } else if (d.hor < 0) {
-		  return (d.y-1)*sqrSize;
+		  return d.y*sqrSize;
 	      } else {
 		  return 0;
 	      }
 	  })
       .attr("x", function(d) {
-	      return sqrSize*d.x;
+	      return sqrSize*d.x
 	  })
-      .attr("width", 2)
-      .attr("height", function(d) {
+      .attr("height", 2)
+      .attr("width", function(d) {
 	      if (d.hor != 0) {
 		  return sqrSize;
 	      } else {
@@ -143,9 +133,9 @@ function main() {
       .attr("class", "verwall")
       .attr("x", function(d) {
 	      if (d.vert > 0) {
-		  return d.x*sqrSize;
+		  return (d.x + 1)*sqrSize;
 	      } else if (d.vert < 0) {
-		  return (d.x-1)*sqrSize;
+		  return d.x*sqrSize;
 	      } else {
 		  return 0;
 	      }
@@ -153,14 +143,14 @@ function main() {
       .attr("y", function(d) {
 	      return sqrSize*d.y;
 	  })
-      .attr("width", function(d) {
+      .attr("height", function(d) {
 	      if (d.vert != 0) {
 		  return sqrSize;
 	      } else {
 		  return 0;
 	      }
 	  })
-      .attr("height", 2)
+      .attr("width", 2)
       .style('fill', '#555')
       .style("stroke", '#555');
 
