@@ -154,6 +154,23 @@ function main() {
       .style('fill', '#555')
       .style("stroke", '#555');
 
+  var target = grid.selectAll('.target')
+      .data(board)
+      .enter().append('svg:polygon')
+      .attr('class', 'target')
+      .attr('points', function(d) {
+	      if (d.target != 0) {
+		  a = '' + (d.x*sqrSize + 3) + ',' + (d.y*sqrSize + 3);
+		  b = '' + ((d.x + 1)*sqrSize - 3) + ',' + (d.y*sqrSize + 3);
+		  c = '' + ((d.x+.5)*sqrSize) + ',' + ((d.y+1)*sqrSize - 3);
+		  return a + ' ' + b + ' ' + c;
+	      }
+	      return '0,0';
+	  })
+      .attr('fill', function(d) {
+	      return d.target;
+	  });
+
   paintRobots(board);
 	});
 }

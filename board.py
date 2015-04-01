@@ -166,7 +166,7 @@ class Board:
 
     def place_target(self):
         (x,y) = self.empty_square()
-        self.board[x][y].set_target(random.choice(ROBOTS))
+        self.board[x][y].set_target(COLORS[random.choice(ROBOTS).lower()])
 
     def init_squares(self):
         board = [[Square(x, y) for x in range(self.size)] for y in range(self.size)]
@@ -220,6 +220,7 @@ class Board:
                 obj['y'] = y
                 obj['hor'] = square.hor_wall
                 obj['vert'] = square.vert_wall
+                obj['target'] = square.target if square.target else 0
                 obj['robot'] = square.robot.color if square.robot else None
                 view.append(obj)
         return view
