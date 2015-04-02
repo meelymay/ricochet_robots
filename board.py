@@ -2,6 +2,8 @@
 import random
 import sys
 
+GAMES = {}
+
 ROBOTS = ['A', 'B', 'C', 'D', 'E', 'F']
 LETTERS = {
     'red': 'a',
@@ -191,9 +193,12 @@ class Board:
             self.board[x][y].set_robot(robot_obj)
             self.robots[robot] = robot_obj
 
+    def get_target(self):
+        return filter(lambda x: x.target is not None, reduce(lambda x, y: x + y, self.board))[0]
+
     def target_hit(self, square=None):
         if not square:
-            square = filter(lambda x: x.target is not None, reduce(lambda x, y: x + y, self.board))
+            square = self.get_target()
         return square.target == square.robot.color
 
     def move_robot(self, robot_name, hor, vert):
@@ -209,12 +214,28 @@ class Board:
             self.place_target()
             print '\n\n-----------------\nCongrats! You hit the target in %s moves!\n-----------------' % self.moves
             self.moves = 0
+            print 'NEW TARGET:',self.get_target()
         return square
 
-    def board_view(self):
+    def board_view(self, filter=None):
+        def filter_target(sqr):
+            return bool(sqr.target)
+        def filter_robot(sqr):
+            return bool(sqr.robot)
+        def no_filter(sqr):
+            return True
+
+        filters = {
+            'robots': filter_robot,
+            'target': filter_target,
+            None: no_filter
+            }
+
         view = []
         for y, row in enumerate(self.board):
             for x, square in enumerate(row):
+                if not filters[filter](square):
+                    continue
                 obj = {}
                 obj['x'] = x
                 obj['y'] = y

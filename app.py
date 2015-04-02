@@ -4,15 +4,24 @@ import random
 app = Flask(__name__)
 
 BOARD_SIZE = 16
-GAME = Board(BOARD_SIZE)
-
 @app.route('/board')
 def draw():
-    return jsonify(data=GAME.board_view())
+    board = GAMES[session['uid']]
+    return jsonify(data=board.board_view())
+
+@app.route('/robots')
+def get_robots():
+    board = GAMES[session['uid']]
+    return jsonify(data=board.board_view(filter='robots'))
+
+@app.route('/target')
+def get_target():
+    board = GAMES[session['uid']]
+    return jsonify(data=board.board_view(filter='target'))
 
 @app.route('/move')
 def move():
-    board = GAME
+    board = GAMES[session['uid']]
 
     color = request.args.get('robot')
     click_x = int(request.args.get('x'))
@@ -33,11 +42,18 @@ def move():
 
     print 'Moving %s, currently at (%s, %s), in the direction of (%s, %s)' % (color,old_x, old_y, click_x, click_y)
     print 'New location (%s, %s)' % (x,y)
-    return jsonify(data={'x': x, 'y': y})
+
+    target = board.get_target()
+
+    print 'A target...',target
+
+    return jsonify(data={'x': x, 'y': y, 'target': target.target})
 
 
 @app.route('/')
 def index():
+    session['uid'] = int(random.random()*100000)
+    GAMES[session['uid']] = Board(BOARD_SIZE)
     return render_template('index.html')
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 var sqrSize = 30;
 var backgroundColor = '#DDD';
 var currentRobot;
+var currentTarget;
 
 function selectRobot() {
     if (currentRobot) {
@@ -33,7 +34,31 @@ function moveRobot() {
 	    currentRobot
 		.attr("cx", (newPosition.x+.5)*sqrSize)
 		.attr("cy", (newPosition.y+.5)*sqrSize);
+
+	    $.get('/target', {}, function(data) {
+		    var targets = data.data;
+		    paintTarget(targets);
+		});
 	});
+}
+
+function paintTarget(targets) {
+    var svg = d3.select('svg');
+
+    if (currentTarget) {
+	currentTarget.attr('points', '0,0');
+    }
+
+    var d = targets[0];
+    a = '' + (d.x*sqrSize + 3) + ',' + (d.y*sqrSize + 3);
+    b = '' + ((d.x + 1)*sqrSize - 3) + ',' + (d.y*sqrSize + 3);
+    c = '' + ((d.x+.5)*sqrSize) + ',' + ((d.y+1)*sqrSize - 3);
+    var points = a + ' ' + b + ' ' + c;
+
+    currentTarget = svg.append('svg:polygon')
+	.attr('class', 'target')
+	.attr('points', points)
+	.attr('fill', d.target);
 }
 
 function paintRobots(robots) {
@@ -154,23 +179,12 @@ function main() {
       .style('fill', '#555')
       .style("stroke", '#555');
 
-  var target = grid.selectAll('.target')
-      .data(board)
-      .enter().append('svg:polygon')
-      .attr('class', 'target')
-      .attr('points', function(d) {
-	      if (d.target != 0) {
-		  a = '' + (d.x*sqrSize + 3) + ',' + (d.y*sqrSize + 3);
-		  b = '' + ((d.x + 1)*sqrSize - 3) + ',' + (d.y*sqrSize + 3);
-		  c = '' + ((d.x+.5)*sqrSize) + ',' + ((d.y+1)*sqrSize - 3);
-		  return a + ' ' + b + ' ' + c;
-	      }
-	      return '0,0';
-	  })
-      .attr('fill', function(d) {
-	      return d.target;
-	  });
+  paintRobots(board.filter(function(sq) {
+	      return Boolean(sq.robot);
+	  }));
 
-  paintRobots(board);
+  paintTarget(board.filter(function(sq) {
+	      return Boolean(sq.target);
+	  }));
 	});
 }
